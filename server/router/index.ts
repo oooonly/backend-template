@@ -3,26 +3,38 @@ import path from 'path'
 import Router from '@koa/router'
 import { ViteDevServer } from 'vite'
 
+const isProd = process.env.NODE_ENV === 'production'
+
 export default (vite: ViteDevServer) => {
   const router = new Router()
   router.get('/', async ctx => {
     ctx.body = 111
   })
 
-  router.get('/ssr', async (ctx, next) => {
+  router.get(/^\/ssr/, async (ctx, next) => {
     const url = ctx.url.slice(4)
 
     try {
-      let template = fs.readFileSync(path.resolve(__dirname, '../../index.html'), 'utf-8')
-      template = await vite.transformIndexHtml(url, template)
+      const manifest = isProd
+        ? // @ts-ignore
+          require(path.resolve(process.cwd(), 'dist/app/client/ssr-manifest.json'))
+        : {}
 
-      const { render } = await vite.ssrLoadModule('@/server-side')
-      const [appHtml] = await render(url, {})
-      console.log(appHtml)
-      const html = template.replace(`<!--ssr-outlet-->`, appHtml)
+      let template, render
+      if (!isProd) {
+        template = fs.readFileSync(path.resolve(__dirname, '../../index.html'), 'utf-8')
+        template = await vite.transformIndexHtml(url, template)
 
-      ctx.status = 200
+        render = (await vite.ssrLoadModule('@/server-side')).render
+      } else {
+        template = fs.readFileSync(path.resolve(process.cwd(), 'dist/app/client/index.html'), 'utf-8')
+        render = require(path.resolve(process.cwd(), 'dist/app/server/server-side.js')).render
+      }
+      const [appHtml, preloadLinks] = await render(url, manifest)
+      const html = template.replace(`<!--preload-links-->`, preloadLinks).replace(`<!--ssr-outlet-->`, appHtml)
+
       ctx.set({ 'Content-Type': 'text/html' })
+      ctx.status = 200
       ctx.body = html
     } catch (e) {
       vite.ssrFixStacktrace(e)

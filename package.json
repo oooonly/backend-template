@@ -2,18 +2,22 @@
   "name": "backend-template",
   "version": "0.0.0",
   "scripts": {
-    "dev": "nodemon --exec node -r ts-node/register ./server/app.ts",
-    "build:server": "nodemon --exec tsup-node ./server/app.ts",
+    "dev": "cross-env NODE_ENV=development nodemon --exec node -r ts-node/register ./server/app.ts",
     "serve": "vite --host",
-    "build": "vue-tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "build": "npm run build:vue && npm run build:server",
+    "build:vue": "vue-tsc --noEmit --skipLibCheck && npm run build:vue-client && npm run build:vue-server",
+    "build:vue-client": "vite build --outDir dist/app/client --ssrManifest",
+    "build:vue-server": "vite build --outDir dist/app/server --ssr ./src/server-side.ts",
+    "build:server": "tsup-node ./server/app.ts -d dist/server",
+    "preview": "cross-env NODE_ENV=production node dist/server/app.js"
   },
   "dependencies": {
     "@icon-park/vue-next": "^1.3.3",
+    "axios": "^0.21.1",
     "dayjs": "^1.10.4",
-    "element-plus": "*",
+    "element-plus": "^1.0.2-beta.55",
     "koa": "^2.13.1",
-    "vue": "^3.0.5",
+    "vue": "^3.1.4",
     "vue-i18n": "^9.1.6",
     "vue-router": "^4.0.8"
   },
@@ -25,6 +29,8 @@
     "@vitejs/plugin-vue": "^1.2.2",
     "@vue/compiler-sfc": "^3.0.5",
     "@vue/server-renderer": "^3.0.11",
+    "cross-env": "^7.0.3",
+    "chalk": "^3.0.0",
     "nodemon": "^2.0.7",
     "sass": "^1.32.13",
     "ts-node": "^9.1.1",
@@ -32,6 +38,6 @@
     "tsup": "^4.11.0",
     "typescript": "^4.1.3",
     "vite": "^2.3.0",
-    "vue-tsc": "^0.0.24"
+    "vue-tsc": "^0.2.0"
   }
 }
